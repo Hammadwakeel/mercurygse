@@ -1,4 +1,5 @@
-"use client"
+'use client'
+
 import { motion, AnimatePresence } from "framer-motion"
 import { PanelLeftClose, PanelLeftOpen, SearchIcon, Plus, Star, Clock } from 'lucide-react'
 import SidebarSection from "./SidebarSection"
@@ -15,20 +16,20 @@ export default function Sidebar({
   setTheme,
   collapsed,
   setCollapsed,
-  conversations,
-  pinned,
-  recent,
+  conversations = [],
+  pinned = [],
+  recent = [],
   selectedId,
-  onSelect,
-  togglePin,
-  query,
-  setQuery,
-  searchRef,
-  createNewChat,
+  onSelect = () => {},
+  togglePin = () => {},
+  query = "",
+  setQuery = () => {},
+  searchRef = null,
+  createNewChat = () => {},
   sidebarCollapsed = false,
   setSidebarCollapsed = () => {},
-  userData,
-  userAvatar,
+  userData = null,
+  userAvatar = null,
 }) {
   const [showSearchModal, setShowSearchModal] = useState(false)
 
@@ -60,6 +61,7 @@ export default function Sidebar({
       .slice(0, 2)
   }
 
+  // COLLAPSED SIDEBAR (small) — still functional; show compact controls and small logo
   if (sidebarCollapsed) {
     return (
       <motion.aside
@@ -97,12 +99,10 @@ export default function Sidebar({
           </button>
 
           <div className="mt-auto mb-4">
-            <button
-              className="rounded-xl p-2 hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
-              title="Settings"
-            >
-              {/* Settings icon here */}
-            </button>
+            {/* Compact logo / company mark in collapsed mode */}
+            <div className="h-8 w-8 overflow-hidden rounded-md">
+              <img src="/images/logo.jpeg" alt="Company Logo" className="h-full w-full object-contain" />
+            </div>
           </div>
         </div>
       </motion.aside>
@@ -137,13 +137,20 @@ export default function Sidebar({
               "fixed inset-y-0 left-0 md:static md:translate-x-0",
             )}
           >
+            {/* -------- TOP HEADER: company logo + company name (replaces AI Assistant text) -------- */}
             <div className="flex items-center gap-2 border-b border-zinc-200/60 px-3 py-3 dark:border-zinc-800">
               <div className="flex items-center gap-2">
-                <div className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 text-white shadow-sm dark:from-zinc-200 dark:to-zinc-300 dark:text-zinc-900">
-                  {/* Asterisk icon here */}
-                </div>
-                <div className="text-sm font-semibold tracking-tight">AI Assistant</div>
+                {/* Company Logo */}
+                <img
+                  src="/images/logo.jpeg"
+                  alt="Company Logo"
+                  className="h-8 w-8 rounded-md object-contain"
+                />
+
+                {/* Company Name */}
+                <div className="text-sm font-semibold tracking-tight">MERCURY GSE</div>
               </div>
+
               <div className="ml-auto flex items-center gap-1">
                 <button
                   onClick={() => setSidebarCollapsed(true)}
@@ -164,6 +171,7 @@ export default function Sidebar({
               </div>
             </div>
 
+            {/* -------- SEARCH INPUT -------- */}
             <div className="px-3 pt-3">
               <label htmlFor="search" className="sr-only">
                 Search conversations
@@ -184,6 +192,7 @@ export default function Sidebar({
               </div>
             </div>
 
+            {/* -------- NEW CHAT BUTTON -------- */}
             <div className="px-3 pt-3">
               <button
                 onClick={createNewChat}
@@ -194,6 +203,7 @@ export default function Sidebar({
               </button>
             </div>
 
+            {/* -------- NAV: PINNED & RECENT -------- */}
             <nav className="mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 pb-4">
               <SidebarSection
                 icon={<Star className="h-4 w-4" />}
@@ -243,34 +253,46 @@ export default function Sidebar({
               </SidebarSection>
             </nav>
 
+            {/* -------- BOTTOM: Settings, Theme, and User / Login -------- */}
             <div className="mt-auto border-t border-zinc-200/60 px-3 py-3 dark:border-zinc-800">
               <div className="flex items-center gap-2">
                 <button
                   className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:hover:bg-zinc-800"
                   title="Settings"
                 >
-                  {/* Settings icon here */}
+                  {/* Settings icon */}
                 </button>
                 <div className="ml-auto">
                   <ThemeToggle theme={theme} setTheme={setTheme} />
                 </div>
               </div>
-              <a
-                href="/profile"
-                className="mt-2 flex items-center gap-2 rounded-xl bg-zinc-50 p-2 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-              >
-                <div className="grid h-8 w-8 place-items-center rounded-full bg-zinc-900 text-xs font-bold text-white dark:bg-white dark:text-zinc-900 overflow-hidden">
-                  {userAvatar ? (
-                    <img src={userAvatar || "/placeholder.svg"} alt={userData?.name} className="h-full w-full object-cover" />
-                  ) : (
-                    getInitials(userData?.name)
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">{userData?.name || "Loading..."}</div>
-                  <div className="truncate text-xs text-zinc-500 dark:text-zinc-400">{userData?.role === "user" ? "User" : userData?.role || "Loading..."}</div>
-                </div>
-              </a>
+
+              {/* If userData exists show profile; otherwise show Login button */}
+              {userData ? (
+                <a
+                  href="/profile"
+                  className="mt-2 flex items-center gap-2 rounded-xl bg-zinc-50 p-2 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                >
+                  <div className="grid h-8 w-8 place-items-center rounded-full bg-zinc-900 text-xs font-bold text-white dark:bg-white dark:text-zinc-900 overflow-hidden">
+                    {userAvatar ? (
+                      <img src={userAvatar} alt={userData?.name} className="h-full w-full object-cover" />
+                    ) : (
+                      getInitials(userData?.name)
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium">{userData?.name || "User"}</div>
+                    <div className="truncate text-xs text-zinc-500 dark:text-zinc-400">{userData?.role === "user" ? "User" : userData?.role || ""}</div>
+                  </div>
+                </a>
+              ) : (
+                <button
+                  onClick={() => (window.location.href = "/login")}
+                  className="mt-3 w-full rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 py-2 text-sm font-semibold hover:bg-zinc-800 dark:hover:bg-zinc-200 transition"
+                >
+                  Login
+                </button>
+              )}
             </div>
           </motion.aside>
         )}
