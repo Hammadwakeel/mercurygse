@@ -148,7 +148,7 @@ export default function Sidebar({
                 />
 
                 {/* Company Name */}
-                <div className="text-sm font-semibold tracking-tight">MERCURY GSE</div>
+                <div className="text-sm font-semibold tracking-tight">AI Mechanic</div>
               </div>
 
               <div className="ml-auto flex items-center gap-1">
