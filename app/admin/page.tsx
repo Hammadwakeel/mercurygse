@@ -9,7 +9,8 @@ import {
   Download, 
   Plus, 
   FileDown,
-  FileJson
+  FileJson,
+  CheckCircle2 // Imported for Success Alert
 } from 'lucide-react'
 import { ingestPdfStream } from "../../lib/api" 
 
@@ -59,15 +60,17 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
 )
 Card.displayName = "Card"
 
-const Alert = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { variant?: "default" | "destructive" }>(
+const Alert = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { variant?: "default" | "destructive" | "success" }>(
   ({ className, variant = "default", ...props }, ref) => (
     <div
       ref={ref}
       role="alert"
-      className={`relative w-full rounded-sm border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-zinc-950 dark:[&>svg]:text-zinc-50 ${
+      className={`relative w-full rounded-sm border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 ${
         variant === "destructive"
           ? "border-red-500/50 text-red-600 dark:border-red-500 [&>svg]:text-red-600 dark:border-red-900/50 dark:text-red-500 dark:dark:border-red-900 dark:[&>svg]:text-red-500"
-          : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50"
+          : variant === "success"
+          ? "border-emerald-500/50 text-emerald-900 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-500/50 dark:text-emerald-50 [&>svg]:text-emerald-600 dark:[&>svg]:text-emerald-400"
+          : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-50 [&>svg]:text-zinc-950 dark:[&>svg]:text-zinc-50"
       } ${className || ""}`}
       {...props}
     />
@@ -120,7 +123,10 @@ export default function AdminDashboard() {
 
   // State
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+  
+  // Alert States
   const [errorMessage, setErrorMessage] = useState("")
+  const [successMessage, setSuccessMessage] = useState("")
 
   // Single Upload States
   const [isSingleUploading, setIsSingleUploading] = useState(false)
@@ -144,7 +150,10 @@ export default function AdminDashboard() {
     const files = event.target.files
     if (!files || files.length === 0) return
 
+    // Reset Alerts
     setErrorMessage("")
+    setSuccessMessage("")
+    
     setIsSingleUploading(true)
     setSingleProgress(0)
     setSingleStatusMsg("Starting upload...")
@@ -162,7 +171,7 @@ export default function AdminDashboard() {
         setSingleStatusMsg(message)
       },
       onError: (msg) => {
-        setErrorMessage(msg)
+        setErrorMessage(msg) // Show Failure Alert
         setIsSingleUploading(false)
       },
       onComplete: (downloadUrl, fileName) => {
@@ -177,6 +186,10 @@ export default function AdminDashboard() {
          setUploadedFiles(prev => [newFile, ...prev])
          setSingleProgress(100)
          setSingleStatusMsg("Complete")
+         
+         // Show Success Alert
+         setSuccessMessage("File successfully uploaded and processed.")
+         
          setTimeout(() => setIsSingleUploading(false), 1000)
       }
     })
@@ -188,7 +201,10 @@ export default function AdminDashboard() {
     const files = event.target.files
     if (!files || files.length === 0) return
 
+    // Reset Alerts
     setErrorMessage("")
+    setSuccessMessage("")
+
     setIsBulkUploading(true)
     setBulkProgress(0)
     setBulkStatusMsg("Starting bulk upload...")
@@ -206,7 +222,7 @@ export default function AdminDashboard() {
           setBulkStatusMsg(message)
         },
         onError: (msg) => {
-          setErrorMessage(msg)
+          setErrorMessage(msg) // Show Failure Alert
           setIsBulkUploading(false)
         },
         onComplete: (downloadUrl, fileName) => {
@@ -220,6 +236,10 @@ export default function AdminDashboard() {
            }
            setUploadedFiles(prev => [newFile, ...prev])
            setBulkProgress(100)
+           
+           // Show Success Alert
+           setSuccessMessage("Bulk archive successfully uploaded and processed.")
+           
            setTimeout(() => setIsBulkUploading(false), 1000)
         }
       })
@@ -266,11 +286,22 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* ERROR ALERT */}
       {errorMessage && (
-        <Alert variant="destructive" className="mb-6 border-red-600 bg-red-50 dark:bg-red-900/20">
+        <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-red-800 dark:text-red-300 font-medium ml-2">
+          <AlertDescription className="font-medium ml-2">
             {errorMessage}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* SUCCESS ALERT */}
+      {successMessage && (
+        <Alert variant="success" className="mb-6">
+          <CheckCircle2 className="h-4 w-4" />
+          <AlertDescription className="font-medium ml-2">
+            {successMessage}
           </AlertDescription>
         </Alert>
       )}
