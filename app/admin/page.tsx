@@ -519,15 +519,13 @@ export default function AdminDashboard() {
             ) : (
               <div className="space-y-2">
                 {remoteUploadedPdfs.map((name) => (
-                  <div key={name} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-sm border border-zinc-200 dark:border-zinc-800">
-                    <div className="flex items-center gap-3 min-w-0">
+                  <div key={name} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-sm border border-zinc-200 dark:border-zinc-800">
+                    <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
                       <FileText className="w-5 h-5 text-orange-600 flex-shrink-0" />
                       <div className="truncate text-sm font-medium">{name}</div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <a href={`https://hammad712-ingestion.hf.space/files/download?filename=${encodeURIComponent(name)}`} target="_blank" rel="noreferrer">
-                        <Button variant="secondary" size="sm">Get</Button>
-                      </a>
+                    <div className="mt-3 sm:mt-0 flex items-center gap-2 w-full sm:w-auto">
+                      <Button variant="secondary" size="sm" className="w-full sm:w-auto" onClick={() => handleDownloadMd(name)}>Download</Button>
                     </div>
                   </div>
                 ))}
@@ -555,13 +553,13 @@ export default function AdminDashboard() {
             ) : (
               <div className="space-y-2">
                 {remoteGeneratedReports.map((name) => (
-                  <div key={name} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-sm border border-zinc-200 dark:border-zinc-800">
-                    <div className="flex items-center gap-3 min-w-0">
+                  <div key={name} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-sm border border-zinc-200 dark:border-zinc-800">
+                    <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
                       <FileJson className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                       <div className="truncate text-sm font-medium">{name}</div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="secondary" size="sm" onClick={() => handleDownloadMd(name)}>Download MD</Button>
+                    <div className="mt-3 sm:mt-0 flex items-center gap-2 w-full sm:w-auto">
+                      <Button variant="secondary" size="sm" className="w-full sm:w-auto" onClick={() => handleDownloadMd(name)}>Download MD</Button>
                     </div>
                   </div>
                 ))}
