@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+import { useRouter } from 'next/navigation'
 import { 
   AlertCircle, 
   Upload, 
@@ -119,7 +120,12 @@ interface UploadedFile {
 }
 
 export default function AdminDashboard() {
-  const router = { push: (path: string) => console.log(`Navigating to ${path}`) }
+  const router = useRouter()
+
+  // Remote files from ingestion service
+  const [remoteUploadedPdfs, setRemoteUploadedPdfs] = useState<string[]>([])
+  const [remoteGeneratedReports, setRemoteGeneratedReports] = useState<string[]>([])
+  const [isFetchingRemote, setIsFetchingRemote] = useState(false)
 
   // State
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
@@ -251,6 +257,65 @@ export default function AdminDashboard() {
     setUploadedFiles((prev) => prev.filter((file) => file.id !== id))
   }
 
+  async function fetchRemoteFiles() {
+    setIsFetchingRemote(true)
+    try {
+      const res = await fetch('https://hammad712-ingestion.hf.space/files/list')
+      if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`)
+      const data = await res.json()
+      const newUploaded = Array.isArray(data.uploaded_pdfs) ? data.uploaded_pdfs : []
+      const newReports = Array.isArray(data.generated_reports) ? data.generated_reports : []
+
+      // Compare with existing and only update if changed
+      const prevUploaded = remoteUploadedPdfs || []
+      const prevReports = remoteGeneratedReports || []
+      const uploadedChanged = JSON.stringify(prevUploaded) !== JSON.stringify(newUploaded)
+      const reportsChanged = JSON.stringify(prevReports) !== JSON.stringify(newReports)
+
+      if (uploadedChanged) {
+        setRemoteUploadedPdfs(newUploaded)
+        try { localStorage.setItem('remoteUploadedPdfs', JSON.stringify(newUploaded)) } catch {}
+      }
+      if (reportsChanged) {
+        setRemoteGeneratedReports(newReports)
+        try { localStorage.setItem('remoteGeneratedReports', JSON.stringify(newReports)) } catch {}
+      }
+    } catch (err: any) {
+      console.error('Error fetching remote files', err)
+      setErrorMessage(err?.message || 'Failed to fetch remote files')
+    } finally {
+      setIsFetchingRemote(false)
+    }
+  }
+
+  useEffect(() => {
+    // try to hydrate from cache first
+    try {
+      const cu = localStorage.getItem('remoteUploadedPdfs')
+      const cr = localStorage.getItem('remoteGeneratedReports')
+      if (cu) setRemoteUploadedPdfs(JSON.parse(cu))
+      if (cr) setRemoteGeneratedReports(JSON.parse(cr))
+    } catch {}
+
+    fetchRemoteFiles()
+  }, [])
+
+  async function handleDownloadMd(filename: string) {
+    try {
+      setErrorMessage("")
+      const url = `https://hammad712-ingestion.hf.space/files/download?filename=${encodeURIComponent(filename)}`
+      const res = await fetch(url)
+      if (!res.ok) throw new Error(`Download failed: ${res.status}`)
+      const json = await res.json()
+      const downloadUrl = json?.report_download_url
+      if (!downloadUrl) throw new Error('No download URL returned')
+      window.open(downloadUrl, '_blank')
+    } catch (err: any) {
+      console.error('Error downloading md', err)
+      setErrorMessage(err?.message || 'Failed to download report')
+    }
+  }
+
   return (
     <div className="min-h-screen w-full flex flex-col p-4 md:p-8 relative overflow-hidden bg-zinc-50 dark:bg-zinc-950 font-sans">
       
@@ -262,27 +327,33 @@ export default function AdminDashboard() {
         }}
       />
 
-      <div className="relative z-10 flex justify-between items-end mb-8 border-b border-zinc-200 dark:border-zinc-800 pb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-             <span className="bg-orange-600 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-sm tracking-widest">Admin Portal</span>
+      <div className="relative z-10 mb-8 border-b border-zinc-200 dark:border-zinc-800 pb-6">
+        <div className="flex items-center justify-between">
+          {/* Left: Back button */}
+          <div className="flex items-center">
+            <Button
+              variant="outline"
+              onClick={() => router.push("/")}
+              className="inline-flex"
+            >
+              Back
+            </Button>
           </div>
-          <h1 className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white uppercase tracking-tight">
-            PDF Management
-          </h1>
-          <p className="text-zinc-500 dark:text-zinc-400 mt-1 max-w-md">
-            Upload fleet manuals, maintenance logs, and compliance reports.
-          </p>
-        </div>
-        <div className="flex gap-4 items-center">
-          <ThemeToggle />
-          <Button
-            variant="outline"
-            onClick={() => router.push("/")}
-            className="hidden md:inline-flex"
-          >
-            Back to Dashboard
-          </Button>
+
+          {/* Center: Title and description */}
+          <div className="text-center mx-4 flex-1">
+            <h1 className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white uppercase tracking-tight">
+              PDF Management
+            </h1>
+            <p className="text-zinc-500 dark:text-zinc-400 mt-1 max-w-md mx-auto">
+              Upload fleet manuals, maintenance logs, and compliance reports.
+            </p>
+          </div>
+
+          {/* Right: Theme toggle */}
+          <div className="flex items-center">
+            <ThemeToggle />
+          </div>
         </div>
       </div>
 
@@ -427,107 +498,78 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* File Gallery */}
-      <Card className="relative z-10 border-t-4 border-t-orange-600 rounded-sm">
-        <div className="p-6 md:p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <FileText className="w-6 h-6 text-orange-600" />
-            <h2 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-white uppercase tracking-wide">
-              Uploaded Documents <span className="text-zinc-400 ml-2">({uploadedFiles.length})</span>
-            </h2>
+      {/* Remote files from ingestion service */}
+      <div className="grid md:grid-cols-2 gap-6 mb-6 relative z-10">
+        <Card>
+          <div className="p-6 md:p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <FileText className="w-6 h-6 text-orange-600" />
+              <h2 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-white uppercase tracking-wide">
+                Remote Uploaded PDFs <span className="text-zinc-400 ml-2">({remoteUploadedPdfs.length})</span>
+              </h2>
+              <div className="ml-auto">
+                <Button variant="ghost" size="sm" onClick={fetchRemoteFiles} className="inline-flex">Refresh</Button>
+              </div>
+            </div>
+
+            {isFetchingRemote ? (
+              <div className="text-sm text-zinc-500">Loading...</div>
+            ) : remoteUploadedPdfs.length === 0 ? (
+              <div className="text-sm text-zinc-500">No remote uploaded PDFs found.</div>
+            ) : (
+              <div className="space-y-2">
+                {remoteUploadedPdfs.map((name) => (
+                  <div key={name} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-sm border border-zinc-200 dark:border-zinc-800">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileText className="w-5 h-5 text-orange-600 flex-shrink-0" />
+                      <div className="truncate text-sm font-medium">{name}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a href={`https://hammad712-ingestion.hf.space/files/download?filename=${encodeURIComponent(name)}`} target="_blank" rel="noreferrer">
+                        <Button variant="secondary" size="sm">Get</Button>
+                      </a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+        </Card>
 
-          {uploadedFiles.length === 0 ? (
-            <div className="text-center py-12 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800 rounded-sm border-dashed">
-              <FileText className="w-16 h-16 text-zinc-300 dark:text-zinc-700 mx-auto mb-4" />
-              <p className="text-zinc-600 dark:text-zinc-400 font-bold uppercase tracking-wide">
-                No files uploaded yet
-              </p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-500 mt-2">
-                Start by uploading your first PDF file above
-              </p>
+        <Card>
+          <div className="p-6 md:p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <FileJson className="w-6 h-6 text-emerald-600" />
+              <h2 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-white uppercase tracking-wide">
+                Generated Reports <span className="text-zinc-400 ml-2">({remoteGeneratedReports.length})</span>
+              </h2>
+              <div className="ml-auto">
+                <Button variant="ghost" size="sm" onClick={fetchRemoteFiles} className="inline-flex">Refresh</Button>
+              </div>
             </div>
-          ) : (
-            <div className="grid gap-3">
-              {uploadedFiles.map((file) => (
-                <div
-                  key={file.id}
-                  className="group flex flex-col md:flex-row items-start md:items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-sm border border-zinc-200 dark:border-zinc-800 hover:border-orange-400 dark:hover:border-orange-600 transition-colors gap-4"
-                >
-                  {/* Left: File Info */}
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="p-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-sm">
-                        <FileText className="w-5 h-5 text-orange-600" />
+
+            {isFetchingRemote ? (
+              <div className="text-sm text-zinc-500">Loading...</div>
+            ) : remoteGeneratedReports.length === 0 ? (
+              <div className="text-sm text-zinc-500">No generated reports found.</div>
+            ) : (
+              <div className="space-y-2">
+                {remoteGeneratedReports.map((name) => (
+                  <div key={name} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-sm border border-zinc-200 dark:border-zinc-800">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileJson className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                      <div className="truncate text-sm font-medium">{name}</div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-zinc-900 dark:text-white font-bold text-sm truncate">
-                        {file.name}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">
-                            {formatFileSize(file.size)}
-                        </span>
-                        <span className="text-zinc-300 dark:text-zinc-700">•</span>
-                        <span className="text-xs text-zinc-500 uppercase tracking-wider font-medium">
-                            {file.uploadedAt}
-                        </span>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <Button variant="secondary" size="sm" onClick={() => handleDownloadMd(name)}>Download MD</Button>
                     </div>
                   </div>
-
-                  {/* Right: Actions Section */}
-                  <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto">
-                    
-                    {/* DOWNLOAD MD SECTION (If processing is complete) */}
-                    {file.downloadUrl && (
-                        <div className="flex items-center">
-                            <a 
-                                href={file.downloadUrl} 
-                                download={file.resultFileName || "download.md"}
-                                className="inline-flex"
-                            >
-                                <Button
-                                variant="secondary" 
-                                size="sm"
-                                className="gap-2 px-4 shadow-sm"
-                                title="Download Processed Markdown"
-                                >
-                                <FileJson className="w-4 h-4" />
-                                <span>MD</span>
-                                </Button>
-                            </a>
-                            {/* Visual Divider */}
-                            <div className="h-6 w-px bg-zinc-200 dark:bg-zinc-800 mx-4 hidden md:block"></div>
-                        </div>
-                    )}
-
-                    {/* Standard File Actions */}
-                    <div className="flex items-center gap-1 opacity-80 hover:opacity-100 transition-opacity">
-                        <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-zinc-600 dark:text-zinc-400 hover:text-orange-600 dark:hover:text-orange-500"
-                        title="Download Original"
-                        >
-                        <Download className="w-4 h-4" />
-                        </Button>
-                        <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        onClick={() => handleDeleteFile(file.id)}
-                        title="Delete"
-                        >
-                        <Trash2 className="w-4 h-4" />
-                        </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
     </div>
   )
 }

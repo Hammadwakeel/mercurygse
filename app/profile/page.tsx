@@ -40,19 +40,43 @@ export default function ProfilePage() {
           return
         }
 
+        // Use cached user data when available
+        const cached = localStorage.getItem("userData")
+        const cachedAvatar = localStorage.getItem("userAvatar")
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached)
+            setIsAuthenticated(true)
+            setFormData(prev => ({ ...prev, name: parsed.name || "", email: parsed.email || "" }))
+          } catch {}
+        }
+        if (cachedAvatar) {
+          setProfileImage(cachedAvatar)
+        }
+
+        // If we already have both cached values, skip network
+        if (cached && cachedAvatar) {
+          setIsLoading(false)
+          return
+        }
+
         const userData = await getMe(accessToken)
         
-        setIsAuthenticated(true)
-        setFormData(prev => ({
-          ...prev,
-          name: userData.name || "",
-          email: userData.email || "",
-        }))
+        if (userData) {
+          setIsAuthenticated(true)
+          setFormData(prev => ({
+            ...prev,
+            name: userData.name || "",
+            email: userData.email || "",
+          }))
+          try { localStorage.setItem("userData", JSON.stringify(userData)) } catch {}
+        }
 
-        if (userData.avatar) {
+        if (userData?.avatar) {
           const avatarUrl = await getAvatarImage(userData.avatar)
           if (avatarUrl) {
             setProfileImage(avatarUrl)
+            try { localStorage.setItem("userAvatar", avatarUrl) } catch {}
           }
         }
       } catch (err) {

@@ -52,14 +52,39 @@ export default function AIAssistantUI() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
+        // Prefer cached user data if available
+        const cached = typeof window !== "undefined" && localStorage.getItem("userData")
+        const cachedAvatar = typeof window !== "undefined" && localStorage.getItem("userAvatar")
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached)
+            setUserData(parsed)
+          } catch {}
+        }
+        if (cachedAvatar) {
+          setUserAvatar(cachedAvatar)
+        }
+
+        // If we already have both cached values, skip network
+        if (cached && cachedAvatar) {
+          setLoadingUser(false)
+          return
+        }
+
         const accessToken = typeof window !== "undefined" && localStorage.getItem("accessToken")
         if (accessToken) {
           const user = await getMe(accessToken)
-          setUserData(user)
+          if (user) {
+            setUserData(user)
+            try { localStorage.setItem("userData", JSON.stringify(user)) } catch {}
+          }
 
           if (user && user.avatar) {
             const avatarUrl = await getAvatarImage(user.avatar)
-            setUserAvatar(avatarUrl)
+            if (avatarUrl) {
+              setUserAvatar(avatarUrl)
+              try { localStorage.setItem("userAvatar", avatarUrl) } catch {}
+            }
           }
         }
       } catch (error) {
@@ -293,24 +318,7 @@ export default function AIAssistantUI() {
 
   return (
     <div className="h-screen w-full bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-      {/* Mobile top bar (accented with orange) */}
-      <div className="md:hidden sticky top-0 z-40 flex items-center gap-2 border-b border-orange-200/60 bg-white/80 px-3 py-2 backdrop-blur dark:border-orange-700/40 dark:bg-zinc-900/70">
-        <div className="ml-1 flex items-center gap-2 text-sm font-semibold tracking-tight">
-          <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-orange-600 text-white text-xs">AI</span>
-          <span className="text-zinc-900 dark:text-zinc-100">Assistant</span>
-        </div>
-          <div className="ml-auto flex items-center gap-2">
-            <GhostIconButton label="Schedule">
-              <Calendar className="h-4 w-4" />
-            </GhostIconButton>
-            <GhostIconButton label="Apps">
-              <LayoutGrid className="h-4 w-4" />
-            </GhostIconButton>
-            <GhostIconButton label="More">
-              <MoreHorizontal className="h-4 w-4" />
-            </GhostIconButton>
-          </div>
-      </div>
+      {/* Mobile top bar removed per request (AI Assistant removed) */}
 
       {/* FULL-WIDTH layout: removed mx-auto and horizontal padding so content touches left edge */}
       <div className="flex h-[calc(100vh-0px)] w-full">

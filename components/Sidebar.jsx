@@ -7,7 +7,7 @@ import ConversationRow from "./ConversationRow"
 import ThemeToggle from "./ThemeToggle"
 import SearchModal from "./SearchModal"
 import { cls } from "./utils"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 export default function Sidebar({
   open,
@@ -32,6 +32,24 @@ export default function Sidebar({
   userAvatar = null,
 }) {
   const [showSearchModal, setShowSearchModal] = useState(false)
+
+  const [isMobile, setIsMobile] = useState(() => {
+    try {
+      return typeof window !== "undefined" ? window.innerWidth < 768 : true
+    } catch {
+      return true
+    }
+  })
+
+  useEffect(() => {
+    const onResize = () => {
+      try {
+        setIsMobile(window.innerWidth < 768)
+      } catch {}
+    }
+    window.addEventListener("resize", onResize)
+    return () => window.removeEventListener("resize", onResize)
+  }, [])
 
   const getConversationsByFolder = (folderName) => {
     return conversations.filter((conv) => conv.folder === folderName)
@@ -128,12 +146,12 @@ export default function Sidebar({
         {(open || typeof window !== "undefined") && (
           <motion.aside
             key="sidebar"
-            initial={{ x: -340 }}
-            animate={{ x: open ? 0 : -340 }}
+            initial={{ x: isMobile ? -340 : 0 }}
+            animate={{ x: isMobile ? (open ? 0 : -340) : 0 }}
             exit={{ x: -340 }}
             transition={{ type: "spring", stiffness: 260, damping: 28 }}
             className={cls(
-              "z-50 flex h-full w-80 shrink-0 flex-col border-r border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900",
+              "z-50 flex h-full w-full max-w-xs sm:w-80 shrink-0 flex-col border-r border-zinc-200/60 bg-white dark:border-zinc-800 dark:bg-zinc-900",
               "fixed inset-y-0 left-0 md:static md:translate-x-0",
             )}
           >
@@ -271,9 +289,9 @@ export default function Sidebar({
               {userData ? (
                 <a
                   href="/profile"
-                  className="mt-2 flex items-center gap-2 rounded-xl bg-zinc-50 p-2 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="mt-2 w-full min-w-0 flex items-center gap-2 rounded-xl bg-zinc-50 p-2 dark:bg-zinc-800/60 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 >
-                  <div className="grid h-8 w-8 place-items-center rounded-full bg-zinc-900 text-xs font-bold text-white dark:bg-white dark:text-zinc-900 overflow-hidden">
+                  <div className="flex-shrink-0 grid h-8 w-8 place-items-center rounded-full bg-zinc-900 text-xs font-bold text-white dark:bg-white dark:text-zinc-900 overflow-hidden">
                     {userAvatar ? (
                       <img src={userAvatar} alt={userData?.name} className="h-full w-full object-cover" />
                     ) : (
