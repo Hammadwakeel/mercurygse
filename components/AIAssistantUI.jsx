@@ -6,7 +6,6 @@ import Sidebar from "./Sidebar"
 import Header from "./Header"
 import ChatPane from "./ChatPane"
 import GhostIconButton from "./GhostIconButton"
-import ThemeToggle from "./ThemeToggle"
 import { INITIAL_CONVERSATIONS, INITIAL_TEMPLATES, INITIAL_FOLDERS } from "./mockData"
 import { getMe, getAvatarImage } from "../lib/api"
 
@@ -300,18 +299,17 @@ export default function AIAssistantUI() {
           <span className="inline-flex h-5 w-5 items-center justify-center rounded-sm bg-orange-600 text-white text-xs">AI</span>
           <span className="text-zinc-900 dark:text-zinc-100">Assistant</span>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <GhostIconButton label="Schedule">
-            <Calendar className="h-4 w-4" />
-          </GhostIconButton>
-          <GhostIconButton label="Apps">
-            <LayoutGrid className="h-4 w-4" />
-          </GhostIconButton>
-          <GhostIconButton label="More">
-            <MoreHorizontal className="h-4 w-4" />
-          </GhostIconButton>
-          <ThemeToggle theme={theme} setTheme={setTheme} />
-        </div>
+          <div className="ml-auto flex items-center gap-2">
+            <GhostIconButton label="Schedule">
+              <Calendar className="h-4 w-4" />
+            </GhostIconButton>
+            <GhostIconButton label="Apps">
+              <LayoutGrid className="h-4 w-4" />
+            </GhostIconButton>
+            <GhostIconButton label="More">
+              <MoreHorizontal className="h-4 w-4" />
+            </GhostIconButton>
+          </div>
       </div>
 
       {/* FULL-WIDTH layout: removed mx-auto and horizontal padding so content touches left edge */}
@@ -346,7 +344,7 @@ export default function AIAssistantUI() {
         />
 
         <main className="relative flex min-w-0 flex-1 flex-col">
-          <Header createNewChat={createNewChat} sidebarCollapsed={sidebarCollapsed} setSidebarOpen={setSidebarOpen} />
+          <Header createNewChat={createNewChat} sidebarCollapsed={sidebarCollapsed} setSidebarOpen={setSidebarOpen} sidebarOpen={sidebarOpen} />
           <ChatPane
             ref={composerRef}
             conversation={selected}
